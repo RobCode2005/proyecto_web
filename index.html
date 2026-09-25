@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Autenticación Moderno</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome & Canvas-Confetti -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            transition: background-color 0.4s ease, color 0.4s ease;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .dark .glass-card {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glow-effect {
+            box-shadow: 0 0 25px -5px rgba(14, 165, 233, 0.4);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.5);
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen flex items-center justify-center p-4 relative overflow-x-hidden selection:bg-brand-500 selection:text-white">
+
+    <div class="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+        <div class="absolute -top-24 -left-24 w-96 h-96 bg-brand-500/20 dark:bg-brand-500/15 rounded-full blur-3xl animate-pulse-slow"></div>
+        <div class="absolute top-1/2 -right-24 w-96 h-96 bg-purple-500/20 dark:bg-purple-500/15 rounded-full blur-3xl animate-pulse-slow" style="animation-delay: 2s;"></div>
+        <div class="absolute -bottom-24 left-1/3 w-96 h-96 bg-emerald-500/20 dark:bg-emerald-500/15 rounded-full blur-3xl animate-pulse-slow" style="animation-delay: 1s;"></div>
+    </div>
+
+    <!-- Theme Switcher Floating Toggle -->
+    <div class="fixed top-6 right-6 z-50">
+        <button id="themeToggleBtn" onclick="toggleTheme()" class="glass-card p-3 rounded-2xl shadow-lg hover:scale-110 active:scale-95 transition-all duration-300 text-slate-700 dark:text-amber-400 flex items-center justify-center">
+            <i id="themeIcon" class="fa-solid fa-moon text-xl"></i>
+        </button>
+    </div>
+
+    <!-- Main Container -->
+    <main class="w-full max-w-md relative z-10 my-8">
+
+        <div id="toast" class="hidden fixed bottom-6 right-6 max-w-xs sm:max-w-sm glass-card p-4 rounded-2xl shadow-2xl z-50 transform transition-all duration-300 translate-y-10 opacity-0 border-l-4 flex items-center gap-3">
+            <div id="toastIcon" class="text-xl"></div>
+            <div class="flex-1">
+                <p id="toastTitle" class="font-bold text-sm"></p>
+                <p id="toastMessage" class="text-xs opacity-80"></p>
+            </div>
+            <button onclick="hideToast()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- VIEW 1: LOGIN FORM -->
+        <div id="viewLogin" class="glass-card rounded-3xl p-8 shadow-2xl transition-all duration-500">
+            <div class="text-center mb-8">
+                <div class="inline-flex p-4 rounded-2xl bg-brand-500/10 dark:bg-brand-500/20 text-brand-600 dark:text-brand-500 mb-3 animate-float">
+                    <i class="fa-solid fa-shield-halved text-3xl"></i>
+                </div>
+                <h1 class="text-2xl font-extrabold tracking-tight">Bienvenido de nuevo</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Ingresa tus credenciales para acceder</p>
+            </div>
+
+            <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider mb-2 text-slate-600 dark:text-slate-300">Usuario</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                            <i class="fa-solid fa-user"></i>
+                        </span>
+                        <input type="text" id="loginUsername" required placeholder="Nombre de usuario" class="w-full pl-10 pr-4 py-3 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition text-sm">
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">Contraseña</label>
+                        <button type="button" onclick="switchView('viewForgot')" class="text-xs text-brand-600 dark:text-brand-500 hover:underline font-medium">¿Olvidaste tu contraseña?</button>
+                    </div>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+                        <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full pl-10 pr-10 py-3 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none transition text-sm">
+                        <button type="button" onclick="togglePasswordVisibility('loginPassword', this)" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full py-3.5 px-4 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl shadow-lg glow-effect active:scale-[0.98] transition duration-200 flex items-center justify-center gap-2">
+                    <span>Continuar</span>
+                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                </button>
+            </form>
+
+            <div class="mt-8 pt-6 border-t border-slate-200/50 dark:border-slate-800/50 text-center">
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                    ¿No tienes una cuenta? 
+                    <button onclick="switchView('viewRegister')" class="text-brand-600 dark:text-brand-500 font-bold hover:underline">Regístrate aquí</button>
+                </p>
+            </div>
+        </div>
+
+        <!-- VIEW 2: SECOND FACTOR (2FA) / RANDOM SECURITY QUESTION -->
+        <div id="view2FA" class="glass-card rounded-3xl p-8 shadow-2xl hidden transition-all duration-500">
+            <div class="text-center mb-6">
+                <div class="inline-flex p-4 rounded-2xl bg-amber-500/10 text-amber-500 mb-3">
+                    <i class="fa-solid fa-key text-3xl"></i>
+                </div>
+                <h2 class="text-2xl font-extrabold">Verificación de Seguridad</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Segundo paso para verificar tu identidad</p>
+            </div>
+
+            <div class="mb-6 p-4 rounded-2xl bg-brand-500/10 dark:bg-brand-500/5 border border-brand-500/20">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400 block mb-1">Pregunta de Seguridad</span>
+                <p id="twoFactorQuestion" class="text-sm font-semibold text-slate-800 dark:text-slate-200">...</p>
+            </div>
+
+            <form id="form2FA" onsubmit="handle2FASubmit(event)" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider mb-2 text-slate-600 dark:text-slate-300">Tu Respuesta</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                            <i class="fa-solid fa-comment-dots"></i>
+                        </span>
+                        <input type="text" id="twoFactorAnswer" required placeholder="Escribe tu respuesta exacta" class="w-full pl-10 pr-4 py-3 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none transition text-sm">
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button type="button" onclick="switchView('viewLogin')" class="w-1/3 py-3 px-4 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 font-semibold rounded-xl text-xs transition">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="w-2/3 py-3.5 px-4 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl shadow-lg glow-effect active:scale-[0.98] transition text-sm flex items-center justify-center gap-2">
+                        <span>Iniciar Sesión</span>
+                        <i class="fa-solid fa-check text-xs"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- VIEW 3: REGISTER / ADMIN USER SETUP -->
+        <div id="viewRegister" class="glass-card rounded-3xl p-8 shadow-2xl hidden transition-all duration-500">
+            <div class="text-center mb-6">
+                <div class="inline-flex p-4 rounded-2xl bg-emerald-500/10 text-emerald-500 mb-3">
+                    <i class="fa-solid fa-user-plus text-3xl"></i>
+                </div>
+                <h2 class="text-2xl font-extrabold">Crear Usuario</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Configura credenciales y pregunta de recuperación</p>
+            </div>
+
+            <form id="registerForm" onsubmit="handleRegisterSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider mb-1 text-slate-600 dark:text-slate-300">Usuario</label>
+                    <input type="text" id="regUsername" required placeholder="Ej. admin" class="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider mb-1 text-slate-600 dark:text-slate-300">Contraseña</label>
+                    <input type="password" id="regPassword" required placeholder="Crea una clave segura" class="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider mb-1 text-slate-600 dark:text-slate-300">Pregunta Secreta (2FA/Recuperación)</label>
+                    <select id="regQuestionSelect" onchange="toggleCustomQuestionInput(this.value)" class="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-sm mb-2">
+                        <option value="¿Cuál es el nombre de tu primera mascota?">¿Cuál es el nombre de tu primera mascota?</option>
+                        <option value="¿En qué ciudad naciste?">¿En qué ciudad naciste?</option>
+                        <option value="¿Cuál es tu libro favorito?">¿Cuál es tu libro favorito?</option>
+                        <option value="custom">Escribir mi propia pregunta personalizada...</option>
+                    </select>
+                    <input type="text" id="regCustomQuestion" placeholder="Escribe tu pregunta personalizada" class="hidden w-full px-4 py-2.5 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider mb-1 text-slate-600 dark:text-slate-300">Respuesta Secreta</label>
+                    <input type="text" id="regAnswer" required placeholder="Respuesta que solo tú conozcas" class="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-sm">
+                </div>
+
+                <div class="pt-2 flex gap-3">
+                    <button type="button" onclick="switchView('viewLogin')" class="w-1/3 py-3 px-4 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 font-semibold rounded-xl text-xs transition">
+                        Volver
+                    </button>
+                    <button type="submit" class="w-2/3 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-lg active:scale-[0.98] transition text-sm">
+                        Guardar Usuario
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- VIEW 4: FORGOT PASSWORD RECOVERY -->
+        <div id="viewForgot" class="glass-card rounded-3xl p-8 shadow-2xl hidden transition-all duration-500">
+            <div class="text-center mb-6">
+                <div class="inline-flex p-4 rounded-2xl bg-purple-500/10 text-purple-500 mb-3">
+                    <i class="fa-solid fa-rotate-left text-3xl"></i>
+                </div>
+                <h2 class="text-2xl font-extrabold">Recuperar Acceso</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Verifica la pregunta de seguridad configurada</p>
+            </div>
+
+            <!-- Step 1: Request Username -->
+            <form id="forgotStep1" onsubmit="handleForgotStep1(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider mb-2 text-slate-600 dark:text-slate-300">Tu Nombre de Usuario</label>
+                    <input type="text" id="forgotUsername" required placeholder="Ingresa tu usuario" class="w-full px-4 py-3 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-sm">
+                </div>
+                <div class="flex gap-3">
+                    <button type="button" onclick="switchView('viewLogin')" class="w-1/3 py-3 px-4 bg-slate-200 dark:bg-slate-800 font-semibold rounded-xl text-xs">Volver</button>
+                    <button type="submit" class="w-2/3 py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl shadow-lg transition text-sm">Buscar Cuenta</button>
+                </div>
+            </form>
+
+            <!-- Step 2: Answer Question & Reset -->
+            <form id="forgotStep2" onsubmit="handleForgotStep2(event)" class="space-y-4 hidden">
+                <div class="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-xs">
+                    <span class="font-bold uppercase tracking-wider text-purple-500 block mb-1">Pregunta del Usuario:</span>
+                    <p id="forgotQuestionDisplay" class="font-semibold text-slate-800 dark:text-slate-200 text-sm"></p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider mb-1 text-slate-600 dark:text-slate-300">Respuesta Correcta</label>
+                    <input type="text" id="forgotAnswerInput" required placeholder="Ingresa tu respuesta secreta" class="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider mb-1 text-slate-600 dark:text-slate-300">Nueva Contraseña</label>
+                    <input type="password" id="forgotNewPassword" required placeholder="Mínimo 4 caracteres" class="w-full px-4 py-2.5 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none text-sm">
+                </div>
+
+                <div class="flex gap-3">
+                    <button type="button" onclick="switchView('viewLogin')" class="w-1/3 py-3 px-4 bg-slate-200 dark:bg-slate-800 font-semibold rounded-xl text-xs">Cancelar</button>
+                    <button type="submit" class="w-2/3 py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl shadow-lg transition text-sm">Restablecer</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- VIEW 5: LOGIN SUCCESS DASHBOARD -->
+        <div id="viewDashboard" class="glass-card rounded-3xl p-8 shadow-2xl hidden transition-all duration-500 text-center relative overflow-hidden">
+            <div class="absolute -right-10 -top-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl"></div>
+            
+            <div class="relative z-10">
+                <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-500/20 text-emerald-500 mb-4 animate-bounce">
+                    <i class="fa-solid fa-circle-check text-4xl"></i>
+                </div>
+                
+                <h1 class="text-3xl font-extrabold tracking-tight mb-1">¡Inicio Exitoso!</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Autenticación de doble factor completada</p>
+
+                <div class="my-6 p-6 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 text-left space-y-3">
+                    <div class="flex justify-between items-center pb-3 border-b border-slate-200 dark:border-slate-800">
+                        <span class="text-xs text-slate-400">Usuario Activo:</span>
+                        <span id="dashUser" class="font-bold text-brand-600 dark:text-brand-400 text-sm"></span>
+                    </div>
+                    <div class="flex justify-between items-center pb-3 border-b border-slate-200 dark:border-slate-800">
+                        <span class="text-xs text-slate-400">Estado de Seguridad:</span>
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                            Verificado 2FA
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-slate-400">Sesión Iniciada:</span>
+                        <span id="dashTime" class="text-xs font-medium text-slate-600 dark:text-slate-300"></span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    <div class="p-3 rounded-xl bg-slate-100 dark:bg-slate-800/50 text-left">
+                        <i class="fa-solid fa-database text-brand-500 mb-1"></i>
+                        <p class="text-[10px] text-slate-400">Almacenamiento</p>
+                        <p class="text-xs font-semibold">localStorage DB</p>
+                    </div>
+                    <div class="p-3 rounded-xl bg-slate-100 dark:bg-slate-800/50 text-left">
+                        <i class="fa-solid fa-lock text-purple-500 mb-1"></i>
+                        <p class="text-[10px] text-slate-400">Método 2FA</p>
+                        <p class="text-xs font-semibold">Pregunta Dinámica</p>
+                    </div>
+                </div>
+
+                <button onclick="handleLogout()" class="w-full py-3 px-4 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 font-semibold rounded-xl transition duration-200 text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Cerrar Sesión</span>
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Default Demo Admin User if LocalStorage is empty
+        const DEMO_USER = {
+            username: 'admin',
+            password: '123',
+            securityQuestion: '¿Cuál es el código secreto inicial?',
+            securityAnswer: '1234'
+        };
+
+        let tempAuthenticatingUser = null;
+        let recoveryTargetUser = null;
+
+        // --- INIT & LOCAL STORAGE ---
+        window.addEventListener('DOMContentLoaded', () => {
+            initUsersDB();
+            initTheme();
+        });
+
+        function getUsersDB() {
+            return JSON.parse(localStorage.getItem('app_users') || '[]');
+        }
+
+        function saveUsersDB(users) {
+            localStorage.setItem('app_users', JSON.stringify(users));
+        }
+
+        function initUsersDB() {
+            const users = getUsersDB();
+            if (users.length === 0) {
+                saveUsersDB([DEMO_USER]);
+            }
+        }
+
+        // --- THEME SWITCHER LOGIC ---
+        function initTheme() {
+            const savedTheme = localStorage.getItem('app_theme');
+            if (savedTheme === 'light') {
+                document.documentElement.classList.remove('dark');
+                updateThemeIcon(false);
+            } else {
+                document.documentElement.classList.add('dark');
+                updateThemeIcon(true);
+            }
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('app_theme', isDark ? 'dark' : 'light');
+            updateThemeIcon(isDark);
+        }
+
+        function updateThemeIcon(isDark) {
+            const icon = document.getElementById('themeIcon');
+            icon.className = isDark ? 'fa-solid fa-sun text-amber-400 text-xl' : 'fa-solid fa-moon text-slate-700 text-xl';
+        }
+
+        // --- NAVIGATION BETWEEN VIEWS ---
+        function switchView(viewId) {
+            const views = ['viewLogin', 'view2FA', 'viewRegister', 'viewForgot', 'viewDashboard'];
+            views.forEach(id => {
+                const el = document.getElementById(id);
+                if (id === viewId) {
+                    el.classList.remove('hidden');
+                } else {
+                    el.classList.add('hidden');
+                }
+            });
+
+            // Reset forgot password step if switching back
+            if (viewId === 'viewForgot') {
+                document.getElementById('forgotStep1').classList.remove('hidden');
+                document.getElementById('forgotStep2').classList.add('hidden');
+                document.getElementById('forgotStep1').reset();
+                document.getElementById('forgotStep2').reset();
+            }
+        }
+
+        // --- LOGIN FLOW ---
+        function handleLoginSubmit(event) {
+            event.preventDefault();
+            const usernameInput = document.getElementById('loginUsername').value.trim();
+            const passwordInput = document.getElementById('loginPassword').value.trim();
+
+            const users = getUsersDB();
+            const user = users.find(u => u.username.toLowerCase() === usernameInput.toLowerCase() && u.password === passwordInput);
+
+            if (user) {
+                tempAuthenticatingUser = user;
+                // Prepare 2FA Security Question
+                document.getElementById('twoFactorQuestion').innerText = user.securityQuestion || '¿Cuál es tu respuesta secreta?';
+                document.getElementById('twoFactorAnswer').value = '';
+                showToast('Credenciales correctas', 'Por favor responde la pregunta de verificación.', 'info');
+                switchView('view2FA');
+            } else {
+                showToast('Error de Acceso', 'Usuario o contraseña incorrectos.', 'error');
+            }
+        }
+
+        // --- 2FA FLOW ---
+        function handle2FASubmit(event) {
+            event.preventDefault();
+            const answerInput = document.getElementById('twoFactorAnswer').value.trim();
+
+            if (!tempAuthenticatingUser) {
+                switchView('viewLogin');
+                return;
+            }
+
+            if (answerInput.toLowerCase() === tempAuthenticatingUser.securityAnswer.toLowerCase()) {
+                // Success! Launch celebration & view dashboard
+                showToast('¡Bienvenido!', 'Sesión iniciada con éxito.', 'success');
+                openDashboard(tempAuthenticatingUser.username);
+                triggerConfetti();
+                tempAuthenticatingUser = null;
+            } else {
+                showToast('Verificación fallida', 'La respuesta secreta no es correcta.', 'error');
+            }
+        }
+
+        // --- REGISTER FLOW ---
+        function toggleCustomQuestionInput(value) {
+            const customInput = document.getElementById('regCustomQuestion');
+            if (value === 'custom') {
+                customInput.classList.remove('hidden');
+                customInput.required = true;
+            } else {
+                customInput.classList.add('hidden');
+                customInput.required = false;
+            }
+        }
+
+        function handleRegisterSubmit(event) {
+            event.preventDefault();
+            const username = document.getElementById('regUsername').value.trim();
+            const password = document.getElementById('regPassword').value.trim();
+            const selectQ = document.getElementById('regQuestionSelect').value;
+            const customQ = document.getElementById('regCustomQuestion').value.trim();
+            const answer = document.getElementById('regAnswer').value.trim();
+
+            const question = selectQ === 'custom' ? customQ : selectQ;
+
+            const users = getUsersDB();
+            if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+                showToast('Usuario existente', 'Ese nombre de usuario ya está registrado.', 'error');
+                return;
+            }
+
+            const newUser = {
+                username,
+                password,
+                securityQuestion: question,
+                securityAnswer: answer
+            };
+
+            users.push(newUser);
+            saveUsersDB(users);
+
+            showToast('Cuenta creada', 'Usuario guardado en localStorage. Ya puedes iniciar sesión.', 'success');
+            document.getElementById('registerForm').reset();
+            switchView('viewLogin');
+        }
+
+        // --- FORGOT PASSWORD FLOW ---
+        function handleForgotStep1(event) {
+            event.preventDefault();
+            const username = document.getElementById('forgotUsername').value.trim();
+            const users = getUsersDB();
+            const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+
+            if (user) {
+                recoveryTargetUser = user;
+                document.getElementById('forgotQuestionDisplay').innerText = user.securityQuestion;
+                document.getElementById('forgotStep1').classList.add('hidden');
+                document.getElementById('forgotStep2').classList.remove('hidden');
+            } else {
+                showToast('No encontrado', 'El usuario ingresado no existe en la base de datos.', 'error');
+            }
+        }
+
+        function handleForgotStep2(event) {
+            event.preventDefault();
+            const answer = document.getElementById('forgotAnswerInput').value.trim();
+            const newPassword = document.getElementById('forgotNewPassword').value.trim();
+
+            if (!recoveryTargetUser) return;
+
+            if (answer.toLowerCase() === recoveryTargetUser.securityAnswer.toLowerCase()) {
+                // Update password in DB
+                let users = getUsersDB();
+                users = users.map(u => {
+                    if (u.username.toLowerCase() === recoveryTargetUser.username.toLowerCase()) {
+                        return { ...u, password: newPassword };
+                    }
+                    return u;
+                });
+                saveUsersDB(users);
+
+                showToast('Éxito', 'Contraseña restablecida correctamente. Inicia sesión.', 'success');
+                recoveryTargetUser = null;
+                switchView('viewLogin');
+            } else {
+                showToast('Respuesta incorrecta', 'La respuesta a la pregunta de seguridad es errónea.', 'error');
+            }
+        }
+
+        // --- DASHBOARD & LOGOUT ---
+        function openDashboard(username) {
+            document.getElementById('dashUser').innerText = username;
+            document.getElementById('dashTime').innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            switchView('viewDashboard');
+        }
+
+        function handleLogout() {
+            document.getElementById('loginForm').reset();
+            switchView('viewLogin');
+            showToast('Sesión cerrada', 'Has salido del sistema de forma segura.', 'info');
+        }
+
+        // --- UTILS & TOASTS ---
+        function togglePasswordVisibility(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fa-solid fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fa-solid fa-eye';
+            }
+        }
+
+        let toastTimeout;
+        function showToast(title, message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const toastTitle = document.getElementById('toastTitle');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastTitle.innerText = title;
+            toastMessage.innerText = message;
+
+            // Reset styles
+            toast.className = toast.className.replace(/border-\w+-\d+/g, '');
+
+            if (type === 'success') {
+                toastIcon.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500"></i>';
+                toast.classList.add('border-emerald-500');
+            } else if (type === 'error') {
+                toastIcon.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-rose-500"></i>';
+                toast.classList.add('border-rose-500');
+            } else {
+                toastIcon.innerHTML = '<i class="fa-solid fa-circle-info text-brand-500"></i>';
+                toast.classList.add('border-brand-500');
+            }
+
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            }, 10);
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                hideToast();
+            }, 4000);
+        }
+
+        function hideToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.add('translate-y-10', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 300);
+        }
+
+        function triggerConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 80,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }
+        }
+    </script>
+</body>
+</html>
